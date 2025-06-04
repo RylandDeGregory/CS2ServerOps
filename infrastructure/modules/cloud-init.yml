@@ -22,7 +22,7 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  - SRCDS_TOKEN="..."
+  - SRCDS_TOKEN="<SRCDS_TOKEN>"
   - mkdir -p $(pwd)/cs2-data
   - chown 1000:1000 $(pwd)/cs2-data
   - docker run -d --name=cs2 -e SRCDS_TOKEN="$SRCDS_TOKEN" -v $(pwd)/cs2-data:/home/steam/cs2-dedicated/ -p 27015:27015/tcp -p 27015:27015/udp -p 27020:27020/udp joedwards32/cs2

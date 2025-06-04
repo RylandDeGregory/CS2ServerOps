@@ -1,6 +1,9 @@
 @sys.description('The Azure Region to deploy the resources into.')
 param location string
 
+@sys.description('The Azure Resource ID of the shared Managed Disk to attach to the Virtual Machine. Optional.')
+param managedDiskId string
+
 @sys.description('The SSH Public Key used to access the Azure Virtual Machine.')
 param sshPublicKey string
 
@@ -42,12 +45,12 @@ module publicIpAddress 'br/public:avm/res/network/public-ip-address:0.8.0' = {
   }
 }
 
-module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.5.2' = {
+module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.15.0' = {
   params: {
     adminUsername: 'azureuser'
     disablePasswordAuthentication: true
     enableTelemetry: false
-    customData: base64(loadTextContent('cloud-init.yml'))
+    customData: loadTextContent('cloud-init-vm.yml')
     imageReference: {
       publisher: 'Canonical'
       offer: 'ubuntu-24_04-lts'
@@ -64,7 +67,9 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.5.2' = {
           {
             name: 'ipconfig1'
             privateIPAllocationMethod: 'Dynamic'
-            publicIPAddressResourceId: publicIpAddress.outputs.resourceId
+            pipConfiguration: {
+              publicIPAddressResourceId: publicIpAddress.outputs.resourceId
+            }
             subnetResourceId: virtualNetworkSubnetId
           }
         ]
@@ -75,9 +80,9 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.5.2' = {
       caching: 'ReadWrite'
       createOption: 'FromImage'
       deleteOption: 'Delete'
-      diskSizeGB: 60
+      diskSizeGB: 512
       managedDisk: {
-        storageAccountType: 'PremiumV2_LRS'
+        storageAccountType: 'Premium_LRS'
       }
       name: virtualMachineDiskName
     }
@@ -85,10 +90,22 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.5.2' = {
     publicKeys: [
       {
         keyData: sshPublicKey
+        path: '/home/azureuser/.ssh/authorized_keys'
       }
     ]
     secureBootEnabled: true
+    encryptionAtHost: false
     vmSize: virtualMachineSku
     zone: 0
+    dataDisks: [
+      {
+        managedDisk: {
+          id: managedDiskId
+        }
+      }
+    ]
   }
 }
+
+output vmName string = virtualMachine.outputs.name
+output vmPublicIpAddress string = publicIpAddress.outputs.ipAddress

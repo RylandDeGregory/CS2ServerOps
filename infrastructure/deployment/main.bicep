@@ -8,16 +8,22 @@ param bastionHostName string = 'bas-cs2gs-${locationShortName}-${uniqueSuffix}'
 @sys.maxLength(80)
 param bastionHostPublicIpAddressName string = 'pip-bas-cs2gs-${locationShortName}-${uniqueSuffix}'
 
-@sys.description('The Azure Region to deploy the resources into. Default: resourceGroup().location')
-param location string = resourceGroup().location
+@sys.description('The Azure Region to deploy the resources into.')
+@sys.allowed([
+  'centralus'
+  'eastus'
+  'eastus2'
+  'northcentralus'
+  'southcentralus'
+  'westus'
+  'westus2'
+  'westus3'
+  'westcentralus'
+])
+param location string
 
 @sys.description('Short Name of the Azure Region to deploy the resources into.')
 @sys.allowed([
-  'az'
-  'swc'
-  'tx'
-  'uks'
-  'ukw'
   'usc'
   'use'
   'use2'
@@ -27,7 +33,6 @@ param location string = resourceGroup().location
   'usw2'
   'usw3'
   'uswc'
-  'va'
 ])
 param locationShortName string = 'use2'
 
@@ -46,10 +51,20 @@ param natGatewayPublicIpAddressName string = 'pip-ng-cs2gs-${locationShortName}-
 @sys.maxLength(80)
 param networkSecurityGroupName string = 'nsg-cs2gs-${locationShortName}-${uniqueSuffix}'
 
+@sys.description('The length of the Public IP Prefix. Default: 29')
+@sys.minValue(24)
+@sys.maxValue(30)
+param publicIpPrefixLength int = 29
+
 @sys.description('The name of the Azure Public IP Prefix. Default: ippre-cs2gs-$<locationShortName>-$<uniqueSuffix>')
 @sys.minLength(1)
 @sys.maxLength(80)
 param publicIpPrefixName string = 'ippre-cs2gs-${locationShortName}-${uniqueSuffix}'
+
+@sys.description('The Public IP Address used to access Azure Virtual Machines via SSH.')
+@sys.minLength(7)
+@sys.maxLength(15)
+param sshIpAddress string
 
 @sys.description('The SSH Public Key used to access the Azure Virtual Machines.')
 param sshPublicKey string
@@ -105,7 +120,9 @@ module networking '../modules/networking.bicep' = {
     natGatewayName: natGatewayName
     natGatewayPublicIpAddressName: natGatewayPublicIpAddressName
     networkSecurityGroupName: networkSecurityGroupName
+    publicIpPrefixLength: publicIpPrefixLength
     publicIpPrefixName: publicIpPrefixName
+    sshIpAddress: sshIpAddress
     virtualNetworkAddressSpace: virtualNetworkAddressSpace
     virtualNetworkName: virtualNetworkName
   }
@@ -116,6 +133,7 @@ module virtualMachine '../modules/vm.bicep' = [
     name: 'VirtualMachine-${i}'
     params: {
       location: location
+      managedDiskId: managedDisk.outputs.resourceId
       sshPublicKey: sshPublicKey
       virtualMachineDiskName: '${virtualMachineDiskName}-${format('{0:0#}', i + 1)}'
       virtualMachineName: '${virtualMachineName}-${format('{0:0#}', i + 1)}'
@@ -124,5 +142,26 @@ module virtualMachine '../modules/vm.bicep' = [
       virtualMachineSku: virtualMachineSku
       virtualNetworkSubnetId: networking.outputs.virtualMachineSubnetId
     }
+  }
+]
+
+module managedDisk 'br/public:avm/res/compute/disk:0.4.3' = {
+  name: 'ManagedDisk'
+  params: {
+    availabilityZone: 1
+    createOption: 'Empty'
+    diskSizeGB: 256
+    enableTelemetry: false
+    location: location
+    maxShares: virtualMachineCount+1
+    name: 'csshared'
+    sku: 'Premium_LRS'
+  }
+}
+
+output virtualMachines array = [
+  for i in range(0, virtualMachineCount): {
+    name: virtualMachine[i].outputs.vmName
+    ipAddress: virtualMachine[i].outputs.vmPublicIpAddress
   }
 ]

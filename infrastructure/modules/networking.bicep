@@ -26,10 +26,20 @@ param natGatewayPublicIpAddressName string
 @sys.maxLength(80)
 param networkSecurityGroupName string
 
+@sys.description('The length of the Public IP Prefix.')
+@sys.minValue(24)
+@sys.maxValue(30)
+param publicIpPrefixLength int
+
 @sys.description('The name of the Azure Public IP Prefix.')
 @sys.minLength(1)
 @sys.maxLength(80)
 param publicIpPrefixName string
+
+@sys.description('The Public IP Address used to access Azure Virtual Machines via SSH.')
+@sys.minLength(7)
+@sys.maxLength(15)
+param sshIpAddress string
 
 @sys.description('IPv4 Address Space (CIDR) for the Virtual Network.')
 @sys.minLength(9)
@@ -110,7 +120,20 @@ module networkSecurityGroup 'br/public:avm/res/network/network-security-group:0.
     name: networkSecurityGroupName
     securityRules: [
       {
-        name: 'Allow-Counterstrike-TCP'
+        name: 'Allow-SSH'
+        properties: {
+          access: 'Allow'
+          destinationPortRange: '22'
+          direction: 'Inbound'
+          priority: 105
+          protocol: 'Tcp'
+          sourceAddressPrefix: sshIpAddress
+          sourcePortRange: '*'
+          destinationAddressPrefix: defaultSubnetAddressPrefix
+      }
+    }
+      {
+        name: 'Allow-CounterStrike-TCP'
         properties: {
           access: 'Allow'
           destinationPortRange: '27015'
@@ -123,12 +146,25 @@ module networkSecurityGroup 'br/public:avm/res/network/network-security-group:0.
         }
       }
       {
-        name: 'Allow-Counterstrike-UDP'
+        name: 'Allow-CounterStrike-UDP'
         properties: {
           access: 'Allow'
-          destinationPortRange: '27015,27020'
+          destinationPortRange: '27015'
           direction: 'Inbound'
-          priority: 115
+          priority: 111
+          protocol: 'Udp'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: defaultSubnetAddressPrefix
+        }
+      }
+      {
+        name: 'Allow-CounterStrikeTV-UDP'
+        properties: {
+          access: 'Allow'
+          destinationPortRange: '27020'
+          direction: 'Inbound'
+          priority: 112
           protocol: 'Udp'
           sourceAddressPrefix: '*'
           sourcePortRange: '*'
@@ -144,7 +180,7 @@ module publicIpPrefix 'br/public:avm/res/network/public-ip-prefix:0.6.0' = {
     enableTelemetry: false
     location: location
     name: publicIpPrefixName
-    prefixLength: 28
+    prefixLength: publicIpPrefixLength
     publicIPAddressVersion: 'IPv4'
     tier: 'Regional'
     zones: [
