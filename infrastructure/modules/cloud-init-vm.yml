@@ -14,6 +14,7 @@ runcmd:
   - sudo apt update
   - sudo apt install steamcmd -y
   - sudo -H -u steam /usr/games/steamcmd +force_install_dir /home/steam/cs2 +login anonymous +app_update 730 validate +quit
+  - sudo -H -u steam mkdir -p /home/steam/.steam/sdk64
   - sudo -H -u steam ln -s /home/steam/.local/share/Steam/steamcmd/linux64/steamclient.so /home/steam/.steam/sdk64/
   - sudo -H -u steam /home/steam/cs2/game/bin/linuxsteamrt64/cs2 -dedicated +map de_dust2 +game_alias competitive -port 27015 +sv_setsteamaccount <SRCDS_TOKEN>
 final_message: "The system has successfully set up CS2 after $UPTIME seconds."
