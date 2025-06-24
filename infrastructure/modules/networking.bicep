@@ -1,6 +1,9 @@
 @sys.description('The Azure Region to deploy the resources into.')
 param location string
 
+@sys.description('If an Azure Bastion Host should be created as part of the Deployment.')
+param bastionHostEnabled bool = false
+
 @sys.description('The name of the Azure Bastion Host.')
 @sys.minLength(1)
 @sys.maxLength(80)
@@ -54,7 +57,7 @@ param virtualNetworkName string
 var bastionSubnetAddressPrefix = cidrSubnet(virtualNetworkAddressSpace, 27, 1)
 var defaultSubnetAddressPrefix = cidrSubnet(virtualNetworkAddressSpace, 27, 2)
 
-module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = {
+module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = if (bastionHostEnabled) {
   params: {
     enableTelemetry: false
     location: location
@@ -65,7 +68,7 @@ module bastionHost 'br/public:avm/res/network/bastion-host:0.6.1' = {
   }
 }
 
-module bastionHostPublicIpAddress 'br/public:avm/res/network/public-ip-address:0.8.0' = {
+module bastionHostPublicIpAddress 'br/public:avm/res/network/public-ip-address:0.8.0' = if (bastionHostEnabled) {
   params: {
     enableTelemetry: false
     location: location
@@ -212,4 +215,5 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.6.1' = {
   }
 }
 
+output publicIpPrefixId string = publicIpPrefix.outputs.resourceId
 output virtualMachineSubnetId string = virtualNetwork.outputs.subnetResourceIds[1]

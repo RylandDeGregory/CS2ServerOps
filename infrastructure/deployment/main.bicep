@@ -72,7 +72,7 @@ param sshPublicKey string
 @sys.description('The number of Azure Virtual Machines to create. Default: 1')
 @sys.minValue(1)
 @sys.maxValue(25)
-param virtualMachineCount int = 1
+param virtualMachineCount int = 4
 
 @sys.description('The name of the Azure Virtual Machine Operating System Disk. Default: osdisk-cs2gs-$<locationShortName>-$<uniqueSuffix>')
 @sys.minLength(1)
@@ -133,7 +133,7 @@ module virtualMachine '../modules/vm.bicep' = [
     name: 'VirtualMachine-${i}'
     params: {
       location: location
-      managedDiskId: managedDisk.outputs.resourceId
+      publicIpPrefixId: networking.outputs.publicIpPrefixId
       sshPublicKey: sshPublicKey
       virtualMachineDiskName: '${virtualMachineDiskName}-${format('{0:0#}', i + 1)}'
       virtualMachineName: '${virtualMachineName}-${format('{0:0#}', i + 1)}'
@@ -144,20 +144,6 @@ module virtualMachine '../modules/vm.bicep' = [
     }
   }
 ]
-
-module managedDisk 'br/public:avm/res/compute/disk:0.4.3' = {
-  name: 'ManagedDisk'
-  params: {
-    availabilityZone: 1
-    createOption: 'Empty'
-    diskSizeGB: 256
-    enableTelemetry: false
-    location: location
-    maxShares: virtualMachineCount+1
-    name: 'csshared'
-    sku: 'Premium_LRS'
-  }
-}
 
 output virtualMachines array = [
   for i in range(0, virtualMachineCount): {

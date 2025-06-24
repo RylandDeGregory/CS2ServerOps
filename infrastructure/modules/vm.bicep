@@ -1,8 +1,8 @@
 @sys.description('The Azure Region to deploy the resources into.')
 param location string
 
-@sys.description('The Azure Resource ID of the shared Managed Disk to attach to the Virtual Machine. Optional.')
-param managedDiskId string
+@sys.description('Azure Resource ID of the Public IP Prefix to connect the Virtual Machine to.')
+param publicIpPrefixId string
 
 @sys.description('The SSH Public Key used to access the Azure Virtual Machine.')
 param sshPublicKey string
@@ -38,8 +38,9 @@ module publicIpAddress 'br/public:avm/res/network/public-ip-address:0.8.0' = {
     enableTelemetry: false
     location: location
     name: virtualMachinePublicIpAddressName
-    publicIPAllocationMethod: 'Static'
     publicIPAddressVersion: 'IPv4'
+    publicIPAllocationMethod: 'Static'
+    publicIpPrefixResourceId: publicIpPrefixId
     skuName: 'Standard'
     skuTier: 'Regional'
   }
@@ -97,13 +98,6 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.15.0' = {
     encryptionAtHost: false
     vmSize: virtualMachineSku
     zone: 0
-    dataDisks: [
-      {
-        managedDisk: {
-          id: managedDiskId
-        }
-      }
-    ]
   }
 }
 
